@@ -852,8 +852,8 @@ function chaveLogin(login) {
 // Firebase → Realtime Database → usuarios/{chave} → isAdmin: true
 async function seedContasPadrao() {
   const contasPadrao = [
-    { nome: "Usuário Teste", login: "teste@teste1",   senha: "12345678", isAdmin: false },
-    { nome: "Administrador", login: "admin@admin.com", senha: "12345678", isAdmin: true  },
+    { nome: "Usuário Teste", login: "teste@gmail.com",   senha: "12345678", isAdmin: false },
+    { nome: "Administrador", login: "admin@gmail.com", senha: "12345678", isAdmin: true  },
   ];
 
   for (const conta of contasPadrao) {
