@@ -811,6 +811,15 @@ button { touch-action: manipulation; }
   background:
     radial-gradient(circle at 50% 0, rgba(255, 37, 52, .16), transparent 260px),
     linear-gradient(180deg, #070707 0%, #0f0f0f 42%, #050505 100%);
+  /* Login/cadastro é o "portão" de entrada — sempre centralizado,
+     inclusive no celular (diferente dos outros modais, que são bottom-sheet). */
+  align-items: center;
+  padding: 18px;
+}
+
+#authOverlay .modal {
+  border-radius: 14px;
+  max-height: 88vh;
 }
 
 /* Enquanto não há sessão confirmada, esconde a rifa e força o gate visível
