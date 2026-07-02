@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Dashboard — Painel do Administrador</title>
+  <link rel="stylesheet" href="admin.css" />
+</head>
+<body>
+
+  <div id="acessoNegado" class="acesso-negado">
+    <h1>🔒 Acesso restrito</h1>
+    <p>Esta página é só para administradores. Faça login com uma conta de admin no site da rifa.</p>
+    <a href="index.html">Voltar para o site</a>
+  </div>
+
+  <div id="appAdmin" class="app-admin" style="display:none">
+    <aside class="sidebar">
+      <div class="sidebar-topo">
+        <div class="sidebar-logo">🎁</div>
+        <div>
+          <strong>Rifa Online</strong>
+          <span>Painel do Administrador</span>
+        </div>
+      </div>
+
+      <nav class="nav">
+        <a class="nav-item ativo" href="admin.html"><span class="ic">🏠</span><span class="rotulo">Dashboard</span></a>
+        <button class="nav-item" type="button" title="Em breve"><span class="ic">🎫</span><span class="rotulo">Rifas</span></button>
+        <button class="nav-item" type="button" title="Em breve"><span class="ic">🎟️</span><span class="rotulo">Bilhetes</span></button>
+        <button class="nav-item" type="button" title="Em breve"><span class="ic">👥</span><span class="rotulo">Participantes</span></button>
+        <button class="nav-item" type="button" title="Em breve"><span class="ic">⚙️</span><span class="rotulo">Configurações</span></button>
+      </nav>
+
+      <div class="nav-sair">
+        <button class="nav-item" type="button" onclick="sairAdmin()"><span class="ic">↪️</span><span class="rotulo">Sair</span></button>
+      </div>
+    </aside>
+
+    <main class="conteudo">
+      <div class="topo-pagina">
+        <h1>Dashboard</h1>
+        <div class="admin-chip">
+          <span class="avatar">A</span>
+          <span id="adminNome">Admin</span>
+        </div>
+      </div>
+
+      <section class="stats-row" aria-label="Resumo geral">
+        <div class="stat-box">
+          <div class="stat-icon ic-roxo">🎫</div>
+          <div class="stat-info">
+            <span>Rifas ativas</span>
+            <strong id="statRifasAtivas">0</strong>
+          </div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-icon ic-verde">🛒</div>
+          <div class="stat-info">
+            <span>Bilhetes vendidos</span>
+            <strong id="statBilhetesVendidos">0</strong>
+          </div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-icon ic-azul">💲</div>
+          <div class="stat-info">
+            <span>Arrecadado</span>
+            <strong id="statArrecadado">R$ 0,00</strong>
+          </div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-icon ic-laranja">👥</div>
+          <div class="stat-info">
+            <span>Participantes</span>
+            <strong id="statParticipantes">0</strong>
+          </div>
+        </div>
+      </section>
+
+      <section class="painel">
+        <div class="painel-header">
+          <h2>Rifas recentes</h2>
+          <button class="btn-ver-todas" type="button" title="Em breve">Ver todas</button>
+        </div>
+        <div class="tabela-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Título</th>
+                <th>Prêmio</th>
+                <th>Vendidos</th>
+                <th>Arrecadado</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody id="corpoRifasRecentes"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="painel">
+        <div class="painel-header">
+          <h2>Bilhetes vendidos recentemente</h2>
+          <button class="btn-ver-todas" type="button" title="Em breve">Ver todos</button>
+        </div>
+        <div class="tabela-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Rifa</th>
+                <th>Participante</th>
+                <th>Número</th>
+                <th>Data</th>
+                <th>Valor</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody id="corpoBilhetes"></tbody>
+          </table>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script src="firebase-config.js"></script>
+  <script src="admin.js"></script>
+</body>
+</html>
