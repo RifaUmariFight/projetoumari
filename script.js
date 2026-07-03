@@ -243,6 +243,8 @@ function atualizarStats() {
   if (elP) elP.textContent = `${percentual.toFixed(1)}% vendido`;
   if (elA) elA.textContent = `R$ ${(cnt * 10).toLocaleString("pt-BR")},00 arrecadados`;
   if (elB) elB.style.width = `${percentual}%`;
+
+  atualizarBannerBilhete();
 }
 
 /* ═══════════════════════════════════════════════════════════
@@ -268,7 +270,9 @@ function obterNumerosPorCPF(cpf) {
 
 function renderBilheteConteudo(cpf, jaBuscou) {
   const el = document.getElementById("bilheteConteudo");
-  if (!jaBuscou) {
+  const cpfValido = jaBuscou && validarCPF(cpf || "");
+
+  if (!cpfValido) {
     el.innerHTML = "";
     return;
   }
@@ -303,6 +307,15 @@ function renderBilheteConteudo(cpf, jaBuscou) {
   `;
 }
 
+/* Mostra o aviso "Já comprou números?" só quando a pessoa comprou ou já
+   consultou com sucesso NESTA visita (meuCpfSessao) — nunca por padrão. */
+function atualizarBannerBilhete() {
+  const banner = document.getElementById("meuBilheteResumo");
+  if (!banner) return;
+  const temNumeros = meuCpfSessao && obterNumerosPorCPF(meuCpfSessao).length > 0;
+  banner.style.display = temNumeros ? "" : "none";
+}
+
 function buscarMeuBilhete() {
   const campo = document.getElementById("bilheteCpfInput");
   const cpf   = campo.value.trim();
@@ -317,6 +330,7 @@ function buscarMeuBilhete() {
   meuCpfSessao = cpfLimpo; // passa a destacar os números pendentes dessa pessoa na grade também
   renderGrid();
   renderBilheteConteudo(cpfLimpo, true);
+  atualizarBannerBilhete();
 }
 
 function abrirMeuBilhete() {
