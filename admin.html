@@ -11,7 +11,10 @@
   <div id="acessoNegado" class="acesso-negado">
     <h1>🔒 Acesso restrito</h1>
     <p>Esta página é só para administradores. Digite a senha para continuar.</p>
-    <input id="adminSenhaInput" class="admin-senha-input" type="password" autocomplete="off" placeholder="Senha de administrador" onkeydown="if(event.key==='Enter') entrarComoAdmin()" />
+    <div class="senha-wrap">
+      <input id="adminSenhaInput" class="admin-senha-input" type="password" autocomplete="off" placeholder="Senha de administrador" onkeydown="if(event.key==='Enter') entrarComoAdmin()" />
+      <button type="button" class="btn-olho" onclick="alternarSenhaAdmin(this)" aria-label="Mostrar senha">👁️</button>
+    </div>
     <button class="admin-senha-btn" type="button" onclick="entrarComoAdmin()">Entrar</button>
     <a href="index.html">Voltar para o site</a>
   </div>
