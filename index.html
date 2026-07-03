@@ -4,22 +4,12 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Rifa Beneficente - Umari Fight</title>
-  <script>
-    // Roda antes da página pintar: evita "flash" da rifa antes do login aparecer.
-    (function () {
-      try {
-        if (localStorage.getItem("rifa_sessao")) {
-          document.documentElement.classList.add("sessao-ok");
-        }
-      } catch (e) {}
-    })();
-  </script>
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
   <header class="hero">
     <div class="auth-bar" id="authBar">
-      <button class="auth-pill" type="button" onclick="abrirAuth()">👤 Entrar</button>
+      <button class="auth-pill" type="button" onclick="abrirAdminLogin()">🔐 Admin</button>
     </div>
   </header>
 
@@ -116,8 +106,11 @@
         id="fTel"
         class="form-input"
         type="tel"
+        inputmode="numeric"
         autocomplete="tel"
         placeholder="(00) 0000-0000"
+        maxlength="16"
+        oninput="mascararTelefone(this)"
     />
 </label>
           <button id="btnIrPix" class="btn-prim" type="button" onclick="irParaPix()">Ir para Pagamento →</button>
@@ -181,53 +174,22 @@
     </div>
   </div>
 
-  <div id="authOverlay" class="modal-overlay" onclick="fecharSeForaAuth(event)">
-    <div class="modal auth-modal" role="dialog" aria-modal="true" aria-labelledby="authTitulo">
+  <div id="adminLoginOverlay" class="modal-overlay" onclick="fecharSeForaAdminLogin(event)">
+    <div class="modal auth-modal" role="dialog" aria-modal="true" aria-labelledby="adminLoginTitulo">
       <div class="modal-header">
         <div>
-          <div id="authTitulo" class="modal-titulo">Minha Conta</div>
+          <div id="adminLoginTitulo" class="modal-titulo">Acesso do Administrador</div>
           <div class="modal-step">Rifa Umari Fight</div>
         </div>
-        <button class="btn-x" type="button" onclick="fecharAuth()" aria-label="Fechar">×</button>
+        <button class="btn-x" type="button" onclick="fecharAdminLogin()" aria-label="Fechar">×</button>
       </div>
 
       <div class="modal-body">
-        <div class="auth-tabs">
-          <button id="tabLogin" class="auth-tab active" type="button" onclick="mudarAbaAuth('login')">Entrar</button>
-          <button id="tabCadastro" class="auth-tab" type="button" onclick="mudarAbaAuth('cadastro')">Criar conta</button>
-        </div>
-
-        <section id="painelLogin">
-          <label class="form-group">
-            <span class="form-label">E-mail ou usuário</span>
-            <input id="lLogin" class="form-input" type="text" autocomplete="username" placeholder="seuemail@exemplo.com" />
-          </label>
-          <label class="form-group">
-            <span class="form-label">Senha</span>
-            <input id="lSenha" class="form-input" type="password" autocomplete="current-password" placeholder="Sua senha" />
-          </label>
-          <button id="btnLogin" class="btn-prim" type="button" onclick="fazerLogin()">Entrar</button>
-        </section>
-
-        <section id="painelCadastro" style="display:none">
-          <label class="form-group">
-            <span class="form-label">Nome completo</span>
-            <input id="cNome" class="form-input" type="text" autocomplete="name" placeholder="Digite seu nome completo" />
-          </label>
-          <label class="form-group">
-            <span class="form-label">E-mail ou usuário</span>
-            <input id="cLogin" class="form-input" type="text" autocomplete="username" placeholder="seuemail@exemplo.com" />
-          </label>
-          <label class="form-group">
-            <span class="form-label">Senha</span>
-            <input id="cSenha" class="form-input" type="password" autocomplete="new-password" placeholder="Crie uma senha (mín. 4 caracteres)" />
-          </label>
-          <label class="form-group">
-            <span class="form-label">Confirmar senha</span>
-            <input id="cSenha2" class="form-input" type="password" autocomplete="new-password" placeholder="Repita a senha" />
-          </label>
-          <button id="btnCadastro" class="btn-prim" type="button" onclick="fazerCadastro()">Criar conta</button>
-        </section>
+        <label class="form-group">
+          <span class="form-label">Senha de administrador</span>
+          <input id="adminSenhaInput" class="form-input" type="password" autocomplete="off" placeholder="Digite a senha" onkeydown="if(event.key==='Enter') fazerLoginAdmin()" />
+        </label>
+        <button id="btnLoginAdmin" class="btn-prim" type="button" onclick="fazerLoginAdmin()">Entrar</button>
       </div>
     </div>
   </div>
