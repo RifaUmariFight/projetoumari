@@ -846,12 +846,15 @@ function fecharSeForaAdminLogin(e) {
   if (e.target.id === "adminLoginOverlay") fecharAdminLogin();
 }
 
+const ICONE_OLHO_ABERTO = `<svg class="ic-olho" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8Z"/><circle cx="12" cy="12" r="3"/></svg>`;
+const ICONE_OLHO_FECHADO = `<svg class="ic-olho" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9.88 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.66 18.66 0 0 1-2.16 3.19"/><path d="M6.61 6.61A18.5 18.5 0 0 0 1 12s4 8 11 8a9.26 9.26 0 0 0 5.39-1.61"/><path d="M14.12 14.12a3 3 0 1 1-4.24-4.24"/><path d="M1 1l22 22"/></svg>`;
+
 function alternarSenha(inputId, botao) {
   const campo = document.getElementById(inputId);
   if (!campo) return;
   const visivel = campo.type === "text";
   campo.type = visivel ? "password" : "text";
-  botao.textContent = visivel ? "👁️" : "🙈";
+  botao.innerHTML = visivel ? ICONE_OLHO_ABERTO : ICONE_OLHO_FECHADO;
   botao.setAttribute("aria-label", visivel ? "Mostrar senha" : "Ocultar senha");
 }
 
