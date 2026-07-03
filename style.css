@@ -840,7 +840,7 @@ button { touch-action: manipulation; }
   align-items: center;
   justify-content: center;
   width: 100%;
-  margin-bottom: 16px;
+  margin-bottom: 10px;
   padding: 12px;
   background: linear-gradient(135deg, #7d0710, var(--red));
   border-radius: 8px;
@@ -849,6 +849,29 @@ button { touch-action: manipulation; }
   font-size: 13px;
   text-decoration: none;
   letter-spacing: .3px;
+}
+
+.btn-sair-admin {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  margin-bottom: 16px;
+  padding: 11px;
+  background: transparent;
+  border: 1px solid #303030;
+  border-radius: 8px;
+  color: #bbb;
+  font-weight: 700;
+  font-size: 12.5px;
+  letter-spacing: .3px;
+  cursor: pointer;
+}
+
+.btn-sair-admin:hover {
+  background: #191919;
+  border-color: #444;
+  color: #fff;
 }
 
 .admin-resumo {
