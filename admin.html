@@ -13,7 +13,9 @@
     <p>Esta página é só para administradores. Digite a senha para continuar.</p>
     <div class="senha-wrap">
       <input id="adminSenhaInput" class="admin-senha-input" type="password" autocomplete="off" placeholder="Senha de administrador" onkeydown="if(event.key==='Enter') entrarComoAdmin()" />
-      <button type="button" class="btn-olho" onclick="alternarSenhaAdmin(this)" aria-label="Mostrar senha">👁️</button>
+      <button type="button" class="btn-olho" onclick="alternarSenhaAdmin(this)" aria-label="Mostrar senha">
+        <svg class="ic-olho" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8Z"/><circle cx="12" cy="12" r="3"/></svg>
+      </button>
     </div>
     <button class="admin-senha-btn" type="button" onclick="entrarComoAdmin()">Entrar</button>
     <a href="index.html">Voltar para o site</a>
