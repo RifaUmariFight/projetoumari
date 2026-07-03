@@ -31,8 +31,8 @@
       </article>
     </section>
 
-    <section id="meuBilheteResumo" class="meu-bilhete-aviso" style="display:none" onclick="abrirMeuBilhete()" role="button" tabindex="0">
-      🎟️ Você já tem <strong id="meuBilheteQtd">0</strong> número(s) nesta rifa<span id="meuBilhetePendenteAviso" style="display:none"> · <strong id="meuBilhetePendenteQtd">0</strong> pendente(s) ⏳</span> — toque para ver seu bilhete
+    <section id="meuBilheteResumo" class="meu-bilhete-aviso" onclick="abrirMeuBilhete()" role="button" tabindex="0">
+      🎟️ Já comprou números? Toque aqui e digite seu CPF pra ver seu bilhete
     </section>
 
 
@@ -113,6 +113,21 @@
         oninput="mascararTelefone(this)"
     />
 </label>
+
+<label class="form-group">
+    <span class="form-label">CPF</span>
+    <input
+        id="fCpf"
+        class="form-input"
+        type="text"
+        inputmode="numeric"
+        autocomplete="off"
+        placeholder="000.000.000-00"
+        maxlength="14"
+        oninput="mascararCPF(this)"
+    />
+    <span class="form-hint">Usado só pra você consultar seus números depois — não aparece pra mais ninguém.</span>
+</label>
           <button id="btnIrPix" class="btn-prim" type="button" onclick="irParaPix()">Ir para Pagamento →</button>
         </section>
 
@@ -169,6 +184,23 @@
         <button class="btn-x" type="button" onclick="fecharMeuBilhete()" aria-label="Fechar">×</button>
       </div>
       <div class="modal-body">
+        <label class="form-group">
+          <span class="form-label">Digite seu CPF pra consultar</span>
+          <div class="busca-cpf-row">
+            <input
+              id="bilheteCpfInput"
+              class="form-input"
+              type="text"
+              inputmode="numeric"
+              autocomplete="off"
+              placeholder="000.000.000-00"
+              maxlength="14"
+              oninput="mascararCPF(this)"
+              onkeydown="if(event.key==='Enter') buscarMeuBilhete()"
+            />
+            <button class="btn-buscar-cpf" type="button" onclick="buscarMeuBilhete()">Buscar</button>
+          </div>
+        </label>
         <div id="bilheteConteudo"></div>
       </div>
     </div>
