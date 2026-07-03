@@ -14,3 +14,11 @@ const FIREBASE_CONFIG = {
   messagingSenderId: "000000000000",
   appId:             "1:000000000000:web:0000000000000000"
 };
+
+/* ═══════════════════════════════════════════════════════════
+   SENHA DE ACESSO DO ADMINISTRADOR
+   Não existe mais conta/login — quem souber essa senha acessa
+   o painel admin (tanto o painel rápido do site quanto o
+   admin.html). TROQUE por uma senha forte antes de publicar.
+═══════════════════════════════════════════════════════════ */
+const ADMIN_SENHA = "umarifight2026";
