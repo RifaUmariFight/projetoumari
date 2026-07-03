@@ -219,6 +219,27 @@ button { touch-action: manipulation; }
 }
 .meu-bilhete-aviso strong { color: #fff; }
 
+.busca-cpf-row {
+  display: flex;
+  gap: 8px;
+}
+
+.busca-cpf-row .form-input { flex: 1; }
+
+.btn-buscar-cpf {
+  padding: 0 18px;
+  background: var(--red);
+  color: #fff;
+  border: 0;
+  border-radius: 8px;
+  font-weight: 800;
+  font-size: 13px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.btn-buscar-cpf:hover { background: #ff3f49; }
+
 .controls {
   margin-top: 18px;
 }
@@ -520,6 +541,14 @@ button { touch-action: manipulation; }
   color: #aaa;
   font-size: 12px;
   font-weight: 700;
+}
+
+.form-hint {
+  display: block;
+  margin-top: 5px;
+  color: #777;
+  font-size: 11px;
+  line-height: 1.4;
 }
 
 .form-input {
