@@ -53,7 +53,6 @@ let timerExpiraEm = null;
         if (useFirebase) {
           useFirebase = false;
           dbRef = null;
-          atualizarStatusSync(false, erro && erro.code);
           toast("Sem conexão com o banco online — os números não vão sincronizar entre dispositivos até isso ser corrigido.", "erro");
           initLocal();
         }
@@ -72,7 +71,6 @@ let timerExpiraEm = null;
         renderGrid();
         atualizarStats();
         atualizarAdminSeAberto();
-        atualizarStatusSync(true);
       }, aoFalhar("numeros"));
 
       // Escuta em tempo real: reservas (filtra expiradas)
@@ -97,40 +95,15 @@ let timerExpiraEm = null;
       console.log("✅ Firestore conectado");
     } catch (e) {
       console.warn("Firebase falhou, usando localStorage:", e);
-      atualizarStatusSync(false, e && e.code);
       initLocal();
     }
   } else {
     console.warn("Firebase não configurado — modo localStorage ativo.");
-    atualizarStatusSync(false, "config-demo");
     initLocal();
   }
 
   atualizarAuthBar();
 })();
-
-/* ─────────────────────────────────────────────────────────
-   INDICADOR VISUAL DE SINCRONIZAÇÃO
-   Mostra no topo do site se está conectado ao Firebase
-   (sincroniza entre todos os dispositivos) ou em modo local
-   (só funciona neste navegador — números não sincronizam).
-───────────────────────────────────────────────────────── */
-function atualizarStatusSync(online, motivo) {
-  const el = document.getElementById("statusSync");
-  if (!el) return;
-
-  if (online) {
-    el.className   = "status-sync online";
-    el.textContent = "🟢 Sincronizado";
-    el.title       = "Conectado ao banco de dados — os números aparecem em tempo real para todo mundo.";
-  } else {
-    el.className   = "status-sync offline";
-    el.textContent = "🔴 Modo local";
-    el.title       = "Não conectado ao banco de dados (" + (motivo || "erro desconhecido") + "). " +
-      "Os números comprados só aparecem neste navegador — outras pessoas não vão ver a mesma coisa. " +
-      "Verifique o firebase-config.js e as regras do Realtime Database.";
-  }
-}
 
 /* ─────────────────────────────────────────────────────────
    MODO LOCAL (localStorage fallback)
