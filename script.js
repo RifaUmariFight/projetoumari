@@ -32,12 +32,15 @@ let timerExpiraEm = null;
 
   if (isConfigReal) {
     try {
-      const { initializeApp }                                    = await import("https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js");
-      const { getDatabase, ref, onValue, runTransaction, get, set } = await import("https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js");
+      const { initializeApp } = await import("https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js");
+      const {
+        getFirestore, collection, doc, setDoc, deleteDoc,
+        onSnapshot, runTransaction, getDocs, writeBatch,
+      } = await import("https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js");
 
       const app = initializeApp(FIREBASE_CONFIG);
-      const db  = getDatabase(app);
-      dbRef = { ref, onValue, runTransaction, get, set, db };
+      const db  = getFirestore(app);
+      dbRef = { collection, doc, setDoc, deleteDoc, onSnapshot, runTransaction, getDocs, writeBatch, db };
       useFirebase = true;
 
       const aoFalhar = (origem) => (erro) => {
@@ -51,9 +54,16 @@ let timerExpiraEm = null;
         }
       };
 
+      // Converte uma coleção do Firestore (docs) num objeto { "001": {...}, "002": {...} }
+      const paraObjeto = (snap) => {
+        const obj = {};
+        snap.forEach(d => { obj[d.id] = d.data(); });
+        return obj;
+      };
+
       // Escuta em tempo real: números vendidos (aprovados)
-      onValue(ref(db, "numeros"), snap => {
-        vendidos = snap.val() || {};
+      onSnapshot(collection(db, "numeros"), snap => {
+        vendidos = paraObjeto(snap);
         renderGrid();
         atualizarStats();
         atualizarAdminSeAberto();
@@ -61,9 +71,9 @@ let timerExpiraEm = null;
       }, aoFalhar("numeros"));
 
       // Escuta em tempo real: reservas (filtra expiradas)
-      onValue(ref(db, "reservas"), snap => {
+      onSnapshot(collection(db, "reservas"), snap => {
         const agora = Date.now();
-        const dados = snap.val() || {};
+        const dados = paraObjeto(snap);
         reservados  = {};
         for (const [num, info] of Object.entries(dados)) {
           if (agora - info.ts < RESERVA_MS) reservados[num] = info;
@@ -72,14 +82,14 @@ let timerExpiraEm = null;
       }, aoFalhar("reservas"));
 
       // Escuta em tempo real: pagamentos aguardando aprovação
-      onValue(ref(db, "pendentes"), snap => {
-        pendentes = snap.val() || {};
+      onSnapshot(collection(db, "pendentes"), snap => {
+        pendentes = paraObjeto(snap);
         renderGrid();
         atualizarStats();
         atualizarAdminSeAberto();
       }, aoFalhar("pendentes"));
 
-      console.log("✅ Firebase conectado");
+      console.log("✅ Firestore conectado");
     } catch (e) {
       console.warn("Firebase falhou, usando localStorage:", e);
       atualizarStatusSync(false, e && e.code);
@@ -458,19 +468,19 @@ async function reservarNumeros(nums, nome) {
   const erros = [];
 
   if (useFirebase && dbRef) {
-    const { ref, runTransaction, db } = dbRef;
+    const { doc, runTransaction, db } = dbRef;
     for (const num of nums) {
       try {
-        let falhou = false;
-        await runTransaction(ref(db, `reservas/${num}`), current => {
-          const agora = Date.now();
+        await runTransaction(db, async (tx) => {
+          const refNum = doc(db, "reservas", num);
+          const snap   = await tx.get(refNum);
+          const agora  = Date.now();
+          const current = snap.exists() ? snap.data() : null;
           if (current && (agora - current.ts) < RESERVA_MS) {
-            falhou = true;
-            return; // aborta
+            throw new Error("reservado");
           }
-          return { ts: agora, nome };
+          tx.set(refNum, { ts: agora, nome });
         });
-        if (falhou) erros.push(num);
       } catch {
         erros.push(num);
       }
@@ -498,11 +508,10 @@ async function reservarNumeros(nums, nome) {
 ───────────────────────────────────────────────────────── */
 async function liberarReserva(nums) {
   if (useFirebase && dbRef) {
-    const { ref, db } = dbRef;
+    const { doc, deleteDoc, db } = dbRef;
     try {
-      const { set } = await import("https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js");
       for (const num of nums) {
-        await set(ref(db, `reservas/${num}`), null);
+        await deleteDoc(doc(db, "reservas", num));
       }
     } catch { /* ok */ }
   } else {
@@ -631,15 +640,16 @@ async function registrarPendente(numeros, nome, tel) {
   const erros = [];
 
   if (useFirebase && dbRef) {
-    const { ref, runTransaction, set, db } = dbRef;
+    const { doc, runTransaction, deleteDoc, db } = dbRef;
     for (const num of numeros) {
       try {
-        let falhou = false;
-        await runTransaction(ref(db, `pendentes/${num}`), current => {
-          if (current !== null || vendidos[num]) { falhou = true; return; } // já pendente ou vendido
-          return { nome, tel, ts: Date.now() };
+        await runTransaction(db, async (tx) => {
+          const refPend = doc(db, "pendentes", num);
+          const refNum  = doc(db, "numeros", num);
+          const [snapPend, snapNum] = await Promise.all([tx.get(refPend), tx.get(refNum)]);
+          if (snapPend.exists() || snapNum.exists()) throw new Error("ocupado"); // já pendente ou vendido
+          tx.set(refPend, { nome, tel, ts: Date.now() });
         });
-        if (falhou) erros.push(num);
       } catch {
         erros.push(num);
       }
@@ -648,7 +658,7 @@ async function registrarPendente(numeros, nome, tel) {
     for (const num of numeros) {
       if (!erros.includes(num)) {
         try {
-          await set(ref(db, `reservas/${num}`), null);
+          await deleteDoc(doc(db, "reservas", num));
         } catch { /* ok */ }
       }
     }
@@ -682,9 +692,9 @@ async function aprovarPagamento(num) {
 
   try {
     if (useFirebase && dbRef) {
-      const { ref, set, db } = dbRef;
-      await set(ref(db, `numeros/${num}`), { nome: registro.nome, tel: registro.tel, ts: Date.now() });
-      await set(ref(db, `pendentes/${num}`), null);
+      const { doc, setDoc, deleteDoc, db } = dbRef;
+      await setDoc(doc(db, "numeros", num), { nome: registro.nome, tel: registro.tel, ts: Date.now() });
+      await deleteDoc(doc(db, "pendentes", num));
     } else {
       vendidos[num] = { nome: registro.nome, tel: registro.tel, ts: Date.now() };
       delete pendentes[num];
@@ -709,8 +719,8 @@ async function rejeitarPagamento(num) {
 
   try {
     if (useFirebase && dbRef) {
-      const { ref, set, db } = dbRef;
-      await set(ref(db, `pendentes/${num}`), null);
+      const { doc, deleteDoc, db } = dbRef;
+      await deleteDoc(doc(db, "pendentes", num));
     } else {
       delete pendentes[num];
       salvarLocal();
@@ -729,6 +739,15 @@ async function rejeitarPagamento(num) {
    RESETAR TUDO (zona de risco)
    Apaga vendidos, reservados e pendentes — volta a rifa ao início.
 ───────────────────────────────────────────────────────── */
+async function limparColecaoFirestore(nomeColecao) {
+  const { collection, getDocs, writeBatch, db } = dbRef;
+  const snap = await getDocs(collection(db, nomeColecao));
+  if (snap.empty) return;
+  const batch = writeBatch(db);
+  snap.forEach(d => batch.delete(d.ref));
+  await batch.commit();
+}
+
 async function resetarTudo() {
   const sessao = obterSessao();
   if (!sessao || !sessao.isAdmin) { toast("Acesso restrito ao administrador.", "erro"); return; }
@@ -745,10 +764,9 @@ async function resetarTudo() {
 
   try {
     if (useFirebase && dbRef) {
-      const { ref, set, db } = dbRef;
-      await set(ref(db, "numeros"), null);
-      await set(ref(db, "reservas"), null);
-      await set(ref(db, "pendentes"), null);
+      await limparColecaoFirestore("numeros");
+      await limparColecaoFirestore("reservas");
+      await limparColecaoFirestore("pendentes");
     } else {
       vendidos   = {};
       reservados = {};
