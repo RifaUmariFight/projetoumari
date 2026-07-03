@@ -30,6 +30,15 @@ let filtroBilhetes = "todos";
   iniciarDashboard();
 })();
 
+function alternarSenhaAdmin(botao) {
+  const campo = document.getElementById("adminSenhaInput");
+  if (!campo) return;
+  const visivel = campo.type === "text";
+  campo.type = visivel ? "password" : "text";
+  botao.textContent = visivel ? "👁️" : "🙈";
+  botao.setAttribute("aria-label", visivel ? "Mostrar senha" : "Ocultar senha");
+}
+
 function entrarComoAdmin() {
   const campo = document.getElementById("adminSenhaInput");
   const senha = campo.value;
@@ -465,6 +474,7 @@ async function resetarTudoAdmin() {
 }
 
 /* ── Expõe funções para o HTML (onclick) ── */
+window.alternarSenhaAdmin = alternarSenhaAdmin;
 window.sairAdmin         = sairAdmin;
 window.entrarComoAdmin   = entrarComoAdmin;
 window.trocarView        = trocarView;
