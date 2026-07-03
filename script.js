@@ -880,6 +880,7 @@ function fazerLoginAdmin() {
 function sairAdmin() {
   encerrarSessao();
   atualizarAuthBar();
+  fecharAdmin();
   toast("Sessão de administrador encerrada.", "ok");
 }
 
