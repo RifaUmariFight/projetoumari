@@ -77,9 +77,7 @@ let timerExpiraEm = null;
     initLocal();
   }
 
-  await seedContasPadrao();
   atualizarAuthBar();
-  if (!obterSessao()) abrirAuth();
 })();
 
 /* ─────────────────────────────────────────────────────────
@@ -129,7 +127,7 @@ function renderGrid() {
     if (vendidos[num]) {
       btn.classList.add("vendido");
       btn.disabled = true;
-      btn.title    = `Vendido – ${vendidos[num].nome}`;
+      btn.title    = "Número vendido";
     } else if (pendentes[num]) {
       btn.classList.add("pendente");
       btn.disabled = true;
@@ -343,8 +341,24 @@ function mostrarPasso(id) {
 }
 
 /* ═══════════════════════════════════════════════════════════
-   PASSO 1 → PASSO 2 (validação + reserva)
+   MÁSCARA DE TELEFONE + PASSO 1 → PASSO 2 (validação + reserva)
 ═══════════════════════════════════════════════════════════ */
+function mascararTelefone(input) {
+  let v = input.value.replace(/\D/g, "").slice(0, 11); // só números, máx. 11 dígitos
+
+  if (v.length > 10) {
+    v = v.replace(/(\d{2})(\d{5})(\d{0,4})/, "($1) $2-$3");
+  } else if (v.length > 5) {
+    v = v.replace(/(\d{2})(\d{4})(\d{0,4})/, "($1) $2-$3");
+  } else if (v.length > 2) {
+    v = v.replace(/(\d{2})(\d{0,5})/, "($1) $2");
+  } else if (v.length > 0) {
+    v = v.replace(/(\d{0,2})/, "($1");
+  }
+
+  input.value = v;
+}
+
 async function irParaPix() {
   const nome = document.getElementById("fNome").value.trim();
   const tel  = document.getElementById("fTel").value.trim();
@@ -791,17 +805,11 @@ function toast(msg, tipo = "ok") {
   window._toastTimer = setTimeout(() => el.classList.remove("ativo"), 4000);
 }
 
-/* ═══════════════════════════════════════════════════════════
-   AUTENTICAÇÃO: CADASTRO / LOGIN / SESSÃO / PAINEL ADMIN
-═══════════════════════════════════════════════════════════ */
-async function hashSenha(senha) {
-  const dados = new TextEncoder().encode(senha);
-  const hashBuffer = await crypto.subtle.digest("SHA-256", dados);
-  return Array.from(new Uint8Array(hashBuffer))
-    .map(b => b.toString(16).padStart(2, "0"))
-    .join("");
-}
 
+/* ═══════════════════════════════════════════════════════════
+   SESSÃO DE ADMIN (sem conta/login — só senha)
+   ADMIN_SENHA vem de firebase-config.js
+═══════════════════════════════════════════════════════════ */
 function obterSessao() {
   try {
     return JSON.parse(localStorage.getItem("rifa_sessao") || "null");
@@ -812,196 +820,55 @@ function obterSessao() {
 
 function salvarSessao(dados) {
   localStorage.setItem("rifa_sessao", JSON.stringify(dados));
-  document.documentElement.classList.add("sessao-ok");
 }
 
 function encerrarSessao() {
   localStorage.removeItem("rifa_sessao");
-  document.documentElement.classList.remove("sessao-ok");
-}
-
-async function buscarUsuario(chave) {
-  if (useFirebase && dbRef) {
-    const { ref, get, db } = dbRef;
-    const snap = await get(ref(db, `usuarios/${chave}`));
-    return snap.exists() ? snap.val() : null;
-  }
-  const usuarios = JSON.parse(localStorage.getItem("rifa_usuarios") || "{}");
-  return usuarios[chave] || null;
-}
-
-async function salvarUsuario(chave, registro) {
-  if (useFirebase && dbRef) {
-    const { ref, set, db } = dbRef;
-    await set(ref(db, `usuarios/${chave}`), registro);
-    return;
-  }
-  const usuarios = JSON.parse(localStorage.getItem("rifa_usuarios") || "{}");
-  usuarios[chave] = registro;
-  localStorage.setItem("rifa_usuarios", JSON.stringify(usuarios));
-}
-
-// Transforma o e-mail/usuário digitado numa chave válida para o Firebase
-// (o Realtime Database não aceita ".", "#", "$", "/", "[" ou "]" nas chaves).
-function chaveLogin(login) {
-  return (login || "").trim().toLowerCase().replace(/[^a-z0-9]/g, "_");
-}
-
-// Garante que as contas de teste existam (roda uma vez na inicialização).
-// Para promover alguém a admin depois, basta editar o registro em
-// Firebase → Realtime Database → usuarios/{chave} → isAdmin: true
-async function seedContasPadrao() {
-  const contasPadrao = [
-    { nome: "Usuário Teste", login: "teste@gmail.com",   senha: "12345678", isAdmin: false },
-    { nome: "Administrador", login: "admin@gmail.com", senha: "12345678", isAdmin: true  },
-  ];
-
-  for (const conta of contasPadrao) {
-    try {
-      const chave = chaveLogin(conta.login);
-      const existente = await buscarUsuario(chave);
-      if (existente) continue;
-      const senhaHash = await hashSenha(conta.senha);
-      await salvarUsuario(chave, {
-        nome: conta.nome,
-        login: conta.login,
-        senhaHash,
-        isAdmin: conta.isAdmin,
-        criadoEm: Date.now(),
-      });
-    } catch (e) {
-      console.warn("Não foi possível criar conta padrão:", conta.login, e);
-    }
-  }
 }
 
 /* ─────────────────────────────────────────────────────────
-   MODAL DE AUTENTICAÇÃO
-   Login é obrigatório: o modal só fecha depois que existe sessão.
+   MODAL DE SENHA DO ADMIN
 ───────────────────────────────────────────────────────── */
-function abrirAuth() {
-  if (obterSessao()) return; // já logado, o botão vira "Sair"/"Painel"
-  mudarAbaAuth("login");
-  document.getElementById("authOverlay").classList.add("ativo");
+function abrirAdminLogin() {
+  const sessao = obterSessao();
+  if (sessao && sessao.isAdmin) { abrirAdmin(); return; }
+  document.getElementById("adminLoginOverlay").classList.add("ativo");
   document.body.style.overflow = "hidden";
+  setTimeout(() => document.getElementById("adminSenhaInput")?.focus(), 50);
 }
 
-function fecharAuth() {
-  if (!obterSessao()) {
-    toast("Crie uma conta ou faça login para acessar a rifa.", "erro");
-    return;
-  }
-  document.getElementById("authOverlay").classList.remove("ativo");
+function fecharAdminLogin() {
+  document.getElementById("adminLoginOverlay").classList.remove("ativo");
   document.body.style.overflow = "";
 }
 
-function fecharSeForaAuth(e) {
-  if (e.target.id === "authOverlay") fecharAuth();
+function fecharSeForaAdminLogin(e) {
+  if (e.target.id === "adminLoginOverlay") fecharAdminLogin();
 }
 
-function mudarAbaAuth(aba) {
-  const ehLogin = aba === "login";
-  document.getElementById("tabLogin").classList.toggle("active", ehLogin);
-  document.getElementById("tabCadastro").classList.toggle("active", !ehLogin);
-  document.getElementById("painelLogin").style.display    = ehLogin ? "" : "none";
-  document.getElementById("painelCadastro").style.display = ehLogin ? "none" : "";
-}
+function fazerLoginAdmin() {
+  const campo = document.getElementById("adminSenhaInput");
+  const senha = campo.value;
 
-/* ─────────────────────────────────────────────────────────
-   CADASTRO
-   Toda conta nova entra como usuário comum. Para virar admin,
-   ajuste isAdmin:true diretamente no Firebase.
-───────────────────────────────────────────────────────── */
-async function fazerCadastro() {
-  const nome   = document.getElementById("cNome").value.trim();
-  const login  = document.getElementById("cLogin").value.trim();
-  const senha  = document.getElementById("cSenha").value;
-  const senha2 = document.getElementById("cSenha2").value;
-  const chave  = chaveLogin(login);
-
-  if (!nome) { toast("Informe seu nome completo.", "erro"); return; }
-  if (login.length < 3) { toast("Informe um e-mail ou usuário válido.", "erro"); return; }
-  if (senha.length < 4) { toast("A senha deve ter pelo menos 4 caracteres.", "erro"); return; }
-  if (senha !== senha2) { toast("As senhas não coincidem.", "erro"); return; }
-
-  const btn = document.getElementById("btnCadastro");
-  btn.disabled = true;
-  btn.textContent = "Criando conta...";
-
-  try {
-    const existente = await buscarUsuario(chave);
-    if (existente) {
-      toast("Já existe uma conta com esse e-mail/usuário. Faça login.", "erro");
-      mudarAbaAuth("login");
-      document.getElementById("lLogin").value = login;
-      return;
-    }
-
-    const senhaHash = await hashSenha(senha);
-    const registro = { nome, login, senhaHash, isAdmin: false, criadoEm: Date.now() };
-    await salvarUsuario(chave, registro);
-
-    salvarSessao({ nome, login, isAdmin: false });
-    atualizarAuthBar();
-    fecharAuth();
-    toast(`Conta criada! Bem-vindo, ${nome}.`, "ok");
-  } catch (e) {
-    console.error(e);
-    toast("Não foi possível criar a conta. Tente novamente.", "erro");
-  } finally {
-    btn.disabled = false;
-    btn.textContent = "Criar conta";
+  if (senha !== ADMIN_SENHA) {
+    toast("Senha incorreta.", "erro");
+    campo.value = "";
+    campo.focus();
+    return;
   }
+
+  salvarSessao({ isAdmin: true });
+  campo.value = "";
+  fecharAdminLogin();
+  atualizarAuthBar();
+  toast("Acesso de administrador liberado!", "ok");
+  abrirAdmin();
 }
 
-/* ─────────────────────────────────────────────────────────
-   LOGIN
-───────────────────────────────────────────────────────── */
-async function fazerLogin() {
-  const login = document.getElementById("lLogin").value.trim();
-  const senha = document.getElementById("lSenha").value;
-  const chave = chaveLogin(login);
-
-  if (login.length < 3) { toast("Informe um e-mail ou usuário válido.", "erro"); return; }
-  if (!senha) { toast("Informe sua senha.", "erro"); return; }
-
-  const btn = document.getElementById("btnLogin");
-  btn.disabled = true;
-  btn.textContent = "Entrando...";
-
-  try {
-    const usuario = await buscarUsuario(chave);
-    if (!usuario) {
-      toast("Conta não encontrada. Crie uma conta primeiro.", "erro");
-      mudarAbaAuth("cadastro");
-      document.getElementById("cLogin").value = login;
-      return;
-    }
-
-    const senhaHash = await hashSenha(senha);
-    if (senhaHash !== usuario.senhaHash) {
-      toast("Senha incorreta.", "erro");
-      return;
-    }
-
-    salvarSessao({ nome: usuario.nome, login: usuario.login || login, isAdmin: !!usuario.isAdmin });
-    atualizarAuthBar();
-    fecharAuth();
-    toast(`Bem-vindo de volta, ${usuario.nome}!`, "ok");
-  } catch (e) {
-    console.error(e);
-    toast("Não foi possível entrar. Tente novamente.", "erro");
-  } finally {
-    btn.disabled = false;
-    btn.textContent = "Entrar";
-  }
-}
-
-function fazerLogout() {
+function sairAdmin() {
   encerrarSessao();
   atualizarAuthBar();
-  toast("Você saiu da sua conta.", "ok");
-  abrirAuth();
+  toast("Sessão de administrador encerrada.", "ok");
 }
 
 /* ─────────────────────────────────────────────────────────
@@ -1012,18 +879,14 @@ function atualizarAuthBar() {
   if (!bar) return;
   const sessao = obterSessao();
 
-  if (!sessao) {
-    bar.innerHTML = `<button class="auth-pill" type="button" onclick="abrirAuth()">👤 Entrar</button>`;
-    return;
+  if (sessao && sessao.isAdmin) {
+    bar.innerHTML = `
+      <button class="auth-pill auth-admin" type="button" onclick="abrirAdmin()">⚙ Admin</button>
+      <button class="auth-pill auth-sair" type="button" onclick="sairAdmin()">Sair</button>
+    `;
+  } else {
+    bar.innerHTML = `<button class="auth-pill" type="button" onclick="abrirAdminLogin()">🔐 Admin</button>`;
   }
-
-  const primeiroNome = (sessao.nome || "").split(" ")[0];
-  let html = `<span class="auth-pill">👋 ${primeiroNome}</span>`;
-  if (sessao.isAdmin) {
-    html += `<button class="auth-pill auth-admin" type="button" onclick="abrirAdmin()">⚙ Admin</button>`;
-  }
-  html += `<button class="auth-pill auth-sair" type="button" onclick="fazerLogout()">Sair</button>`;
-  bar.innerHTML = html;
 }
 
 /* ─────────────────────────────────────────────────────────
@@ -1124,6 +987,7 @@ window.abrirModal         = abrirModal;
 window.fecharModal        = fecharModal;
 window.fecharSeForaModal  = fecharSeForaModal;
 window.fecharSucesso      = fecharSucesso;
+window.mascararTelefone   = mascararTelefone;
 window.irParaPix          = irParaPix;
 window.copiarPix          = copiarPix;
 window.confirmarPagamento = confirmarPagamento;
@@ -1134,13 +998,11 @@ window.selecionarAleatorio = selecionarAleatorio;
 window.abrirMeuBilhete     = abrirMeuBilhete;
 window.fecharMeuBilhete    = fecharMeuBilhete;
 window.fecharSeForaBilhete = fecharSeForaBilhete;
-window.abrirAuth           = abrirAuth;
-window.fecharAuth          = fecharAuth;
-window.fecharSeForaAuth    = fecharSeForaAuth;
-window.mudarAbaAuth        = mudarAbaAuth;
-window.fazerCadastro       = fazerCadastro;
-window.fazerLogin          = fazerLogin;
-window.fazerLogout         = fazerLogout;
+window.abrirAdminLogin        = abrirAdminLogin;
+window.fecharAdminLogin       = fecharAdminLogin;
+window.fecharSeForaAdminLogin = fecharSeForaAdminLogin;
+window.fazerLoginAdmin        = fazerLoginAdmin;
+window.sairAdmin              = sairAdmin;
 window.abrirAdmin          = abrirAdmin;
 window.fecharAdmin         = fecharAdmin;
 window.fecharSeForaAdmin   = fecharSeForaAdmin;
