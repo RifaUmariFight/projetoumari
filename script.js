@@ -141,6 +141,9 @@ function renderGrid() {
   const grid = document.getElementById("grid");
   const frag = document.createDocumentFragment();
 
+  const meuId = obterMeuId();
+  const meuTel = meuId ? normalizarTel(meuId.tel) : null;
+
   for (let i = 1; i <= 1000; i++) {
     const num = pad(i);
     const btn = document.createElement("button");
@@ -154,9 +157,18 @@ function renderGrid() {
       btn.disabled = true;
       btn.title    = "Número vendido";
     } else if (pendentes[num]) {
-      btn.classList.add("pendente");
-      btn.disabled = true;
-      btn.title    = "Pagamento em análise (aguardando aprovação do admin)";
+      const ehMeu = meuTel && normalizarTel(pendentes[num].tel) === meuTel;
+      if (ehMeu) {
+        btn.classList.add("pendente");
+        btn.disabled = true;
+        btn.title    = "Seu pagamento está em análise (aguardando aprovação do admin)";
+      } else {
+        // Pra qualquer outra pessoa, não revela que é um pagamento pendente —
+        // só aparece como indisponível no momento.
+        btn.classList.add("reservado");
+        btn.disabled = true;
+        btn.title    = "Número indisponível no momento";
+      }
     } else if (reservados[num]) {
       btn.classList.add("reservado");
       btn.disabled = true;
@@ -240,10 +252,16 @@ function atualizarStats() {
 
   const banner = document.getElementById("meuBilheteResumo");
   const bannerQtd = document.getElementById("meuBilheteQtd");
+  const bannerPendenteAviso = document.getElementById("meuBilhetePendenteAviso");
+  const bannerPendenteQtd = document.getElementById("meuBilhetePendenteQtd");
   if (banner) {
     if (meusNumeros.length > 0) {
       banner.style.display = "";
       if (bannerQtd) bannerQtd.textContent = meusNumeros.length;
+
+      const qtdPendentes = meusNumeros.filter(n => n.status === "pendente").length;
+      if (bannerPendenteAviso) bannerPendenteAviso.style.display = qtdPendentes > 0 ? "" : "none";
+      if (bannerPendenteQtd) bannerPendenteQtd.textContent = qtdPendentes;
     } else {
       banner.style.display = "none";
     }
@@ -292,6 +310,8 @@ function renderBilheteConteudo() {
     return;
   }
 
+  const qtdPendentes = numeros.filter(n => n.status === "pendente").length;
+
   el.innerHTML = `
     <div class="bilhete-card">
       <div class="bilhete-evento">Rifa Beneficente · Umari Fight</div>
@@ -301,6 +321,12 @@ function renderBilheteConteudo() {
       <div class="bilhete-numeros">
         ${numeros.map(({ num, status }) => `<span class="bilhete-num${status === "pendente" ? " status-pendente" : ""}" title="${status === "pendente" ? "Aguardando aprovação" : "Aprovado"}">${num}${status === "pendente" ? " ⏳" : ""}</span>`).join("")}
       </div>
+      ${qtdPendentes > 0 ? `
+        <div class="bilhete-aviso-pendente">
+          ⏳ <strong>${qtdPendentes} número${qtdPendentes > 1 ? "s" : ""} com pagamento pendente.</strong>
+          Só fica confirmado depois que o administrador aprovar o comprovante — até lá, o número continua reservado só pra você e não pode ser vendido pra outra pessoa.
+        </div>
+      ` : ""}
       <div class="bilhete-total">${numeros.length} número${numeros.length > 1 ? "s" : ""} · R$ ${numeros.length * 10},00</div>
     </div>
   `;
@@ -575,6 +601,10 @@ async function confirmarPagamento() {
   btn.disabled    = true;
   btn.textContent = "Registrando...";
 
+  // Salva a identificação ANTES de registrar o pendente, pra grade já
+  // reconhecer esses números como "meus" assim que renderizar.
+  salvarMeuId(nome, tel);
+
   const erros = await registrarPendente(numeros, nome, tel);
 
   if (erros.length) {
@@ -588,10 +618,10 @@ async function confirmarPagamento() {
 
   // Sucesso: limpa seleção
   pararTimerPix();
-  salvarMeuId(nome, tel);
   selecionados = [];
   atualizarResumo();
   atualizarStats();
+  renderGrid();
 
   // Preenche tela de sucesso
   document.getElementById("sNome").textContent    = nome;
