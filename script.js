@@ -846,6 +846,15 @@ function fecharSeForaAdminLogin(e) {
   if (e.target.id === "adminLoginOverlay") fecharAdminLogin();
 }
 
+function alternarSenha(inputId, botao) {
+  const campo = document.getElementById(inputId);
+  if (!campo) return;
+  const visivel = campo.type === "text";
+  campo.type = visivel ? "password" : "text";
+  botao.textContent = visivel ? "👁️" : "🙈";
+  botao.setAttribute("aria-label", visivel ? "Mostrar senha" : "Ocultar senha");
+}
+
 function fazerLoginAdmin() {
   const campo = document.getElementById("adminSenhaInput");
   const senha = campo.value;
@@ -998,6 +1007,7 @@ window.selecionarAleatorio = selecionarAleatorio;
 window.abrirMeuBilhete     = abrirMeuBilhete;
 window.fecharMeuBilhete    = fecharMeuBilhete;
 window.fecharSeForaBilhete = fecharSeForaBilhete;
+window.alternarSenha      = alternarSenha;
 window.abrirAdminLogin        = abrirAdminLogin;
 window.fecharAdminLogin       = fecharAdminLogin;
 window.fecharSeForaAdminLogin = fecharSeForaAdminLogin;
