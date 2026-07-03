@@ -187,7 +187,10 @@
       <div class="modal-body">
         <label class="form-group">
           <span class="form-label">Senha de administrador</span>
-          <input id="adminSenhaInput" class="form-input" type="password" autocomplete="off" placeholder="Digite a senha" onkeydown="if(event.key==='Enter') fazerLoginAdmin()" />
+          <div class="senha-wrap">
+            <input id="adminSenhaInput" class="form-input" type="password" autocomplete="off" placeholder="Digite a senha" onkeydown="if(event.key==='Enter') fazerLoginAdmin()" />
+            <button type="button" class="btn-olho" onclick="alternarSenha('adminSenhaInput', this)" aria-label="Mostrar senha">👁️</button>
+          </div>
         </label>
         <button id="btnLoginAdmin" class="btn-prim" type="button" onclick="fazerLoginAdmin()">Entrar</button>
       </div>
