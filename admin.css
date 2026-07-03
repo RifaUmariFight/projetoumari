@@ -77,13 +77,13 @@ a { color: inherit; }
   justify-content: center;
   background: transparent;
   border: 0;
-  font-size: 16px;
+  color: var(--muted);
   cursor: pointer;
   border-radius: 6px;
   line-height: 1;
 }
 
-.btn-olho:hover { background: var(--bg); }
+.btn-olho:hover { background: var(--bg); color: var(--text); }
 
 .admin-senha-btn {
   width: 100%;
