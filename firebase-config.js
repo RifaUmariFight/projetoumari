@@ -6,13 +6,13 @@
    Atualize só aqui — os dois arquivos usam esse mesmo valor.
 ═══════════════════════════════════════════════════════════ */
 const FIREBASE_CONFIG = {
-  apiKey:            "AIzaSyDEMO-substitua-pela-sua-chave",
-  authDomain:        "seu-projeto.firebaseapp.com",
-  databaseURL:       "https://seu-projeto-default-rtdb.firebaseio.com",
-  projectId:         "seu-projeto",
-  storageBucket:     "seu-projeto.appspot.com",
-  messagingSenderId: "000000000000",
-  appId:             "1:000000000000:web:0000000000000000"
+  apiKey:            "AIzaSyCvz5pi3iV2n0Si7qnoRSFrn5mKzT2lfu0",
+  authDomain:        "rifa-umari-fight.firebaseapp.com",
+  databaseURL:       "https://rifa-umari-fight-default-rtdb.firebaseio.com",
+  projectId:         "rifa-umari-fight",
+  storageBucket:     "rifa-umari-fight.firebasestorage.app",
+  messagingSenderId: "755525989658",
+  appId:             "1:755525989658:web:7d765c13cc226f93cb68a3"
 };
 
 /* ═══════════════════════════════════════════════════════════
