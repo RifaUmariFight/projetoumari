@@ -21,4 +21,4 @@ const FIREBASE_CONFIG = {
    o painel admin (tanto o painel rápido do site quanto o
    admin.html). TROQUE por uma senha forte antes de publicar.
 ═══════════════════════════════════════════════════════════ */
-const ADMIN_SENHA = "umarifight2026";
+const ADMIN_SENHA = "jhonata@1";
