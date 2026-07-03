@@ -27,6 +27,11 @@ let timerExpiraEm = null;
    INICIALIZAÇÃO
 ═══════════════════════════════════════════════════════════ */
 (async function init() {
+  // Desenha a grade na hora (números como disponíveis), sem esperar o Firebase.
+  // Assim que os dados chegarem (Firestore ou localStorage), ela se atualiza sozinha.
+  renderGrid();
+  atualizarStats();
+
   // Tenta carregar Firebase dinamicamente
   const isConfigReal = !FIREBASE_CONFIG.apiKey.includes("DEMO");
 
