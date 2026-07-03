@@ -12,16 +12,17 @@ const RESERVA_MS   = 5 * 60 * 1000;  // 5 minutos em ms
 /* ═══════════════════════════════════════════════════════════
    ESTADO GLOBAL
 ═══════════════════════════════════════════════════════════ */
-let vendidos     = {};  // { "001": { nome, tel, ts } }
+let vendidos     = {};  // { "001": { nome, tel, cpf, ts } }
 let reservados   = {};  // { "001": { ts } }
-let pendentes    = {};  // { "001": { nome, tel, ts } } — pagamento enviado, aguardando aprovação do admin
+let pendentes    = {};  // { "001": { nome, tel, cpf, ts } } — pagamento enviado, aguardando aprovação do admin
 let selecionados = [];  // ["001","007", ...]
-let compraAtual  = {};  // { nome, tel, numeros }
+let compraAtual  = {};  // { nome, tel, cpf, numeros }
 let useFirebase  = false;
 let dbRef        = null; // referência ao firebase db
 let filtroStatus = "todos";
 let timerInterval = null;
 let timerExpiraEm = null;
+let meuCpfSessao = null; // CPF de quem comprou/consultou agora (só em memória, some ao recarregar)
 
 /* ═══════════════════════════════════════════════════════════
    INICIALIZAÇÃO
@@ -141,9 +142,6 @@ function renderGrid() {
   const grid = document.getElementById("grid");
   const frag = document.createDocumentFragment();
 
-  const meuId = obterMeuId();
-  const meuTel = meuId ? normalizarTel(meuId.tel) : null;
-
   for (let i = 1; i <= 1000; i++) {
     const num = pad(i);
     const btn = document.createElement("button");
@@ -157,7 +155,7 @@ function renderGrid() {
       btn.disabled = true;
       btn.title    = "Número vendido";
     } else if (pendentes[num]) {
-      const ehMeu = meuTel && normalizarTel(pendentes[num].tel) === meuTel;
+      const ehMeu = meuCpfSessao && normalizarCPF(pendentes[num].cpf) === meuCpfSessao;
       if (ehMeu) {
         btn.classList.add("pendente");
         btn.disabled = true;
@@ -234,7 +232,6 @@ function atualizarStats() {
   const cntPendentes  = Object.keys(pendentes).length;
   const elV = document.getElementById("totalVendidos");
   const elD = document.getElementById("totalDisp");
-  const elM = document.getElementById("totalMeus");
   const elP = document.getElementById("percentVendido");
   const elA = document.getElementById("valorArrecadado");
   const elB = document.getElementById("progressBar");
@@ -246,76 +243,50 @@ function atualizarStats() {
   if (elP) elP.textContent = `${percentual.toFixed(1)}% vendido`;
   if (elA) elA.textContent = `R$ ${(cnt * 10).toLocaleString("pt-BR")},00 arrecadados`;
   if (elB) elB.style.width = `${percentual}%`;
-
-  const meusNumeros = obterMeusNumeros();
-  if (elM) elM.textContent = meusNumeros.length;
-
-  const banner = document.getElementById("meuBilheteResumo");
-  const bannerQtd = document.getElementById("meuBilheteQtd");
-  const bannerPendenteAviso = document.getElementById("meuBilhetePendenteAviso");
-  const bannerPendenteQtd = document.getElementById("meuBilhetePendenteQtd");
-  if (banner) {
-    if (meusNumeros.length > 0) {
-      banner.style.display = "";
-      if (bannerQtd) bannerQtd.textContent = meusNumeros.length;
-
-      const qtdPendentes = meusNumeros.filter(n => n.status === "pendente").length;
-      if (bannerPendenteAviso) bannerPendenteAviso.style.display = qtdPendentes > 0 ? "" : "none";
-      if (bannerPendenteQtd) bannerPendenteQtd.textContent = qtdPendentes;
-    } else {
-      banner.style.display = "none";
-    }
-  }
 }
 
 /* ═══════════════════════════════════════════════════════════
-   MEU BILHETE (identificação via telefone salvo localmente)
+   MEU BILHETE (consulta explícita por CPF — não fica
+   "logado" sozinho, evitando conflito em aparelho compartilhado)
 ═══════════════════════════════════════════════════════════ */
 function normalizarTel(tel) {
   return (tel || "").replace(/\D/g, "");
 }
 
-function salvarMeuId(nome, tel) {
-  localStorage.setItem("rifa_meu_id", JSON.stringify({ nome, tel: normalizarTel(tel) }));
-}
-
-function obterMeuId() {
-  try {
-    return JSON.parse(localStorage.getItem("rifa_meu_id") || "null");
-  } catch {
-    return null;
-  }
-}
-
-function obterMeusNumeros() {
-  const meuId = obterMeuId();
-  if (!meuId || !meuId.tel) return [];
+function obterNumerosPorCPF(cpf) {
+  const cpfLimpo = normalizarCPF(cpf);
+  if (!cpfLimpo) return [];
   const lista = [];
   Object.keys(vendidos).forEach(num => {
-    if (normalizarTel(vendidos[num].tel) === meuId.tel) lista.push({ num, status: "vendido" });
+    if (normalizarCPF(vendidos[num].cpf) === cpfLimpo) lista.push({ num, status: "vendido", info: vendidos[num] });
   });
   Object.keys(pendentes).forEach(num => {
-    if (normalizarTel(pendentes[num].tel) === meuId.tel) lista.push({ num, status: "pendente" });
+    if (normalizarCPF(pendentes[num].cpf) === cpfLimpo) lista.push({ num, status: "pendente", info: pendentes[num] });
   });
   return lista.sort((a, b) => a.num.localeCompare(b.num));
 }
 
-function renderBilheteConteudo() {
-  const meuId = obterMeuId();
-  const numeros = obterMeusNumeros();
+function renderBilheteConteudo(cpf, jaBuscou) {
   const el = document.getElementById("bilheteConteudo");
-
-  if (!meuId || numeros.length === 0) {
-    el.innerHTML = `<div class="bilhete-vazio">Você ainda não comprou números nesta rifa neste dispositivo.</div>`;
+  if (!jaBuscou) {
+    el.innerHTML = "";
     return;
   }
 
-  const qtdPendentes = numeros.filter(n => n.status === "pendente").length;
+  const numeros = obterNumerosPorCPF(cpf);
+
+  if (numeros.length === 0) {
+    el.innerHTML = `<div class="bilhete-vazio">Nenhum número encontrado pra esse CPF nesta rifa.</div>`;
+    return;
+  }
+
+  const nomeComprador = numeros[0].info.nome || "";
+  const qtdPendentes  = numeros.filter(n => n.status === "pendente").length;
 
   el.innerHTML = `
     <div class="bilhete-card">
       <div class="bilhete-evento">Rifa Beneficente · Umari Fight</div>
-      <div class="bilhete-nome">${meuId.nome}</div>
+      <div class="bilhete-nome">${nomeComprador}</div>
       <div class="bilhete-linha-sep"></div>
       <div class="bilhete-numeros-label">Seus números</div>
       <div class="bilhete-numeros">
@@ -332,10 +303,29 @@ function renderBilheteConteudo() {
   `;
 }
 
+function buscarMeuBilhete() {
+  const campo = document.getElementById("bilheteCpfInput");
+  const cpf   = campo.value.trim();
+
+  if (!validarCPF(cpf)) {
+    toast("Informe um CPF válido pra consultar.", "erro");
+    campo.focus();
+    return;
+  }
+
+  const cpfLimpo = normalizarCPF(cpf);
+  meuCpfSessao = cpfLimpo; // passa a destacar os números pendentes dessa pessoa na grade também
+  renderGrid();
+  renderBilheteConteudo(cpfLimpo, true);
+}
+
 function abrirMeuBilhete() {
-  renderBilheteConteudo();
+  const campo = document.getElementById("bilheteCpfInput");
+  if (campo) campo.value = "";
+  renderBilheteConteudo(null, false);
   document.getElementById("bilheteOverlay").classList.add("ativo");
   document.body.style.overflow = "hidden";
+  setTimeout(() => campo && campo.focus(), 50);
 }
 
 function fecharMeuBilhete() {
@@ -410,9 +400,53 @@ function mascararTelefone(input) {
   input.value = v;
 }
 
+function mascararCPF(input) {
+  let v = input.value.replace(/\D/g, "").slice(0, 11); // só números, máx. 11 dígitos
+
+  if (v.length > 9) {
+    v = v.replace(/(\d{3})(\d{3})(\d{3})(\d{0,2})/, "$1.$2.$3-$4");
+  } else if (v.length > 6) {
+    v = v.replace(/(\d{3})(\d{3})(\d{0,3})/, "$1.$2.$3");
+  } else if (v.length > 3) {
+    v = v.replace(/(\d{3})(\d{0,3})/, "$1.$2");
+  }
+
+  input.value = v;
+}
+
+function normalizarCPF(cpf) {
+  return (cpf || "").replace(/\D/g, "");
+}
+
+function formatarCPFExibicao(cpf) {
+  const limpo = normalizarCPF(cpf);
+  if (limpo.length !== 11) return "—";
+  return limpo.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, "$1.$2.$3-$4");
+}
+
+function validarCPF(cpfBruto) {
+  const cpf = normalizarCPF(cpfBruto);
+  if (cpf.length !== 11 || /^(\d)\1{10}$/.test(cpf)) return false;
+
+  let soma = 0;
+  for (let i = 0; i < 9; i++) soma += parseInt(cpf[i], 10) * (10 - i);
+  let resto = (soma * 10) % 11;
+  if (resto === 10 || resto === 11) resto = 0;
+  if (resto !== parseInt(cpf[9], 10)) return false;
+
+  soma = 0;
+  for (let i = 0; i < 10; i++) soma += parseInt(cpf[i], 10) * (11 - i);
+  resto = (soma * 10) % 11;
+  if (resto === 10 || resto === 11) resto = 0;
+  if (resto !== parseInt(cpf[10], 10)) return false;
+
+  return true;
+}
+
 async function irParaPix() {
   const nome = document.getElementById("fNome").value.trim();
   const tel  = document.getElementById("fTel").value.trim();
+  const cpf  = document.getElementById("fCpf").value.trim();
 
   if (!nome) {
     toast("Informe seu nome completo.", "erro");
@@ -422,6 +456,11 @@ async function irParaPix() {
   if (tel.replace(/\D/g, "").length < 10) {
     toast("Informe um telefone válido com DDD.", "erro");
     document.getElementById("fTel").focus();
+    return;
+  }
+  if (!validarCPF(cpf)) {
+    toast("Informe um CPF válido.", "erro");
+    document.getElementById("fCpf").focus();
     return;
   }
 
@@ -452,7 +491,7 @@ async function irParaPix() {
   }
 
   // Salva estado da compra
-  compraAtual = { nome, tel, numeros: [...selecionados] };
+  compraAtual = { nome, tel, cpf: normalizarCPF(cpf), numeros: [...selecionados] };
 
   // Preenche passo 2
   document.getElementById("pNome").textContent    = nome;
@@ -596,16 +635,17 @@ function copiarPix() {
    CONFIRMAR PAGAMENTO → ENVIA PARA APROVAÇÃO DO ADMIN
 ═══════════════════════════════════════════════════════════ */
 async function confirmarPagamento() {
-  const { nome, tel, numeros } = compraAtual;
+  const { nome, tel, cpf, numeros } = compraAtual;
   const btn = document.getElementById("btnConfirmar");
   btn.disabled    = true;
   btn.textContent = "Registrando...";
 
-  // Salva a identificação ANTES de registrar o pendente, pra grade já
-  // reconhecer esses números como "meus" assim que renderizar.
-  salvarMeuId(nome, tel);
+  // Marca a sessão atual como dona desses números (só em memória — some ao
+  // recarregar a página), pra grade destacar como "pendente" pra quem comprou
+  // agora, sem depender de localStorage nem causar conflito em aparelho compartilhado.
+  meuCpfSessao = cpf;
 
-  const erros = await registrarPendente(numeros, nome, tel);
+  const erros = await registrarPendente(numeros, nome, tel, cpf);
 
   if (erros.length) {
     toast(`Número(s) ${erros.join(", ")} já foram comprados por outra pessoa.`, "erro");
@@ -644,7 +684,7 @@ async function confirmarPagamento() {
 /* ─────────────────────────────────────────────────────────
    Registrar pagamento como pendente (aguardando aprovação)
 ───────────────────────────────────────────────────────── */
-async function registrarPendente(numeros, nome, tel) {
+async function registrarPendente(numeros, nome, tel, cpf) {
   const erros = [];
 
   if (useFirebase && dbRef) {
@@ -656,7 +696,7 @@ async function registrarPendente(numeros, nome, tel) {
           const refNum  = doc(db, "numeros", num);
           const [snapPend, snapNum] = await Promise.all([tx.get(refPend), tx.get(refNum)]);
           if (snapPend.exists() || snapNum.exists()) throw new Error("ocupado"); // já pendente ou vendido
-          tx.set(refPend, { nome, tel, ts: Date.now() });
+          tx.set(refPend, { nome, tel, cpf, ts: Date.now() });
         });
       } catch {
         erros.push(num);
@@ -676,7 +716,7 @@ async function registrarPendente(numeros, nome, tel) {
       if (vendidos[num] || pendentes[num]) {
         erros.push(num);
       } else {
-        pendentes[num] = { nome, tel, ts: Date.now() };
+        pendentes[num] = { nome, tel, cpf, ts: Date.now() };
         delete reservados[num];
       }
     }
@@ -701,10 +741,10 @@ async function aprovarPagamento(num) {
   try {
     if (useFirebase && dbRef) {
       const { doc, setDoc, deleteDoc, db } = dbRef;
-      await setDoc(doc(db, "numeros", num), { nome: registro.nome, tel: registro.tel, ts: Date.now() });
+      await setDoc(doc(db, "numeros", num), { nome: registro.nome, tel: registro.tel, cpf: registro.cpf, ts: Date.now() });
       await deleteDoc(doc(db, "pendentes", num));
     } else {
-      vendidos[num] = { nome: registro.nome, tel: registro.tel, ts: Date.now() };
+      vendidos[num] = { nome: registro.nome, tel: registro.tel, cpf: registro.cpf, ts: Date.now() };
       delete pendentes[num];
       salvarLocal();
       renderGrid();
@@ -1016,7 +1056,7 @@ function renderAdminPendentes() {
         <span class="pendente-num">${num}</span>
         <div class="pendente-info">
           <div class="pendente-nome">${info.nome || "—"}</div>
-          <div class="pendente-tel">📱 ${info.tel || "—"}</div>
+          <div class="pendente-tel">📱 ${info.tel || "—"} · CPF ${formatarCPFExibicao(info.cpf)}</div>
         </div>
       </div>
       <div class="pendente-acoes">
@@ -1044,7 +1084,7 @@ function renderAdminVendidos() {
     <div class="admin-row">
       <div class="admin-row-info">
         <div class="admin-row-nome">${info.nome || "—"}</div>
-        <div class="admin-row-tel">${info.tel || "—"}</div>
+        <div class="admin-row-tel">${info.tel || "—"} · CPF ${formatarCPFExibicao(info.cpf)}</div>
       </div>
       <span class="admin-row-num">${num}</span>
     </div>
@@ -1074,6 +1114,8 @@ window.selecionarAleatorio = selecionarAleatorio;
 window.abrirMeuBilhete     = abrirMeuBilhete;
 window.fecharMeuBilhete    = fecharMeuBilhete;
 window.fecharSeForaBilhete = fecharSeForaBilhete;
+window.buscarMeuBilhete    = buscarMeuBilhete;
+window.mascararCPF         = mascararCPF;
 window.alternarSenha      = alternarSenha;
 window.abrirAdminLogin        = abrirAdminLogin;
 window.fecharAdminLogin       = fecharAdminLogin;
