@@ -534,6 +534,34 @@ button { touch-action: manipulation; }
 
 .form-input:focus { border-color: var(--red); }
 
+.senha-wrap {
+  position: relative;
+}
+
+.senha-wrap .form-input {
+  padding-right: 44px;
+}
+
+.btn-olho {
+  position: absolute;
+  top: 50%;
+  right: 6px;
+  transform: translateY(-50%);
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: 0;
+  font-size: 16px;
+  cursor: pointer;
+  border-radius: 6px;
+  line-height: 1;
+}
+
+.btn-olho:hover { background: #262626; }
+
 .btn-prim,
 .btn-paguei {
   width: 100%;
