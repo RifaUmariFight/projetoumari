@@ -82,7 +82,6 @@ async function iniciarDashboard() {
         if (useFirebase) {
           useFirebase = false;
           dbRef = null;
-          atualizarStatusSync(false, erro && erro.code);
           initLocal();
         }
       };
@@ -96,7 +95,6 @@ async function iniciarDashboard() {
       onSnapshot(collection(db, "numeros"), snap => {
         vendidos = paraObjeto(snap);
         renderTudo();
-        atualizarStatusSync(true);
       }, aoFalhar("numeros"));
 
       onSnapshot(collection(db, "pendentes"), snap => {
@@ -105,32 +103,10 @@ async function iniciarDashboard() {
       }, aoFalhar("pendentes"));
     } catch (e) {
       console.warn("Firebase falhou, usando localStorage:", e);
-      atualizarStatusSync(false, e && e.code);
       initLocal();
     }
   } else {
-    atualizarStatusSync(false, "config-demo");
     initLocal();
-  }
-}
-
-/* ─────────────────────────────────────────────────────────
-   INDICADOR VISUAL DE SINCRONIZAÇÃO
-───────────────────────────────────────────────────────── */
-function atualizarStatusSync(online, motivo) {
-  const el = document.getElementById("statusSync");
-  if (!el) return;
-
-  if (online) {
-    el.className   = "status-sync online";
-    el.textContent = "🟢 Sincronizado";
-    el.title       = "Conectado ao banco de dados — os dados são os mesmos em qualquer dispositivo.";
-  } else {
-    el.className   = "status-sync offline";
-    el.textContent = "🔴 Modo local";
-    el.title       = "Não conectado ao banco de dados (" + (motivo || "erro desconhecido") + "). " +
-      "Os dados mostrados aqui são só deste navegador — podem não bater com o site. " +
-      "Verifique o firebase-config.js e as regras do Realtime Database.";
   }
 }
 
@@ -178,6 +154,16 @@ function sairAdmin() {
 ───────────────────────────────────────────────────────── */
 function normalizarTel(tel) {
   return (tel || "").replace(/\D/g, "");
+}
+
+function normalizarCPF(cpf) {
+  return (cpf || "").replace(/\D/g, "");
+}
+
+function formatarCPFExibicao(cpf) {
+  const limpo = normalizarCPF(cpf);
+  if (limpo.length !== 11) return "—";
+  return limpo.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, "$1.$2.$3-$4");
 }
 
 function formatarMoeda(valor) {
@@ -363,7 +349,7 @@ function renderViewBilhetes() {
   entradas.sort((a, b) => (b.info.ts || 0) - (a.info.ts || 0));
 
   if (!entradas.length) {
-    corpo.innerHTML = `<tr><td colspan="8" class="tabela-vazia">Nenhum bilhete encontrado.</td></tr>`;
+    corpo.innerHTML = `<tr><td colspan="9" class="tabela-vazia">Nenhum bilhete encontrado.</td></tr>`;
     return;
   }
 
@@ -372,6 +358,7 @@ function renderViewBilhetes() {
       <td>#${num}</td>
       <td>${info.nome || "—"}</td>
       <td>${info.tel || "—"}</td>
+      <td>${formatarCPFExibicao(info.cpf)}</td>
       <td>${num}</td>
       <td>${formatarData(info.ts)}</td>
       <td>${formatarMoeda(PRECO_NUMERO)}</td>
@@ -395,24 +382,24 @@ function renderViewParticipantes() {
   const corpo = document.getElementById("corpoParticipantes");
   if (!corpo) return;
 
-  const mapa = {}; // chave: telefone normalizado
+  const mapa = {}; // chave: CPF normalizado (identificador único do participante)
 
   Object.values(vendidos).forEach(info => {
-    const chave = normalizarTel(info.tel) || `sem-tel-${info.nome}`;
-    if (!mapa[chave]) mapa[chave] = { nome: info.nome, tel: info.tel, aprovados: 0, pendentes: 0 };
+    const chave = normalizarCPF(info.cpf) || `sem-cpf-${info.nome}`;
+    if (!mapa[chave]) mapa[chave] = { nome: info.nome, tel: info.tel, cpf: info.cpf, aprovados: 0, pendentes: 0 };
     mapa[chave].aprovados++;
   });
 
   Object.values(pendentes).forEach(info => {
-    const chave = normalizarTel(info.tel) || `sem-tel-${info.nome}`;
-    if (!mapa[chave]) mapa[chave] = { nome: info.nome, tel: info.tel, aprovados: 0, pendentes: 0 };
+    const chave = normalizarCPF(info.cpf) || `sem-cpf-${info.nome}`;
+    if (!mapa[chave]) mapa[chave] = { nome: info.nome, tel: info.tel, cpf: info.cpf, aprovados: 0, pendentes: 0 };
     mapa[chave].pendentes++;
   });
 
   const lista = Object.values(mapa).sort((a, b) => (b.aprovados * PRECO_NUMERO) - (a.aprovados * PRECO_NUMERO));
 
   if (!lista.length) {
-    corpo.innerHTML = `<tr><td colspan="5" class="tabela-vazia">Nenhum participante ainda.</td></tr>`;
+    corpo.innerHTML = `<tr><td colspan="6" class="tabela-vazia">Nenhum participante ainda.</td></tr>`;
     return;
   }
 
@@ -420,6 +407,7 @@ function renderViewParticipantes() {
     <tr>
       <td>${p.nome || "—"}</td>
       <td>${p.tel || "—"}</td>
+      <td>${formatarCPFExibicao(p.cpf)}</td>
       <td>${p.aprovados}</td>
       <td>${p.pendentes}</td>
       <td>${formatarMoeda(p.aprovados * PRECO_NUMERO)}</td>
@@ -452,10 +440,10 @@ async function aprovarPagamento(num) {
   try {
     if (useFirebase && dbRef) {
       const { doc, setDoc, deleteDoc, db } = dbRef;
-      await setDoc(doc(db, "numeros", num), { nome: registro.nome, tel: registro.tel, ts: Date.now() });
+      await setDoc(doc(db, "numeros", num), { nome: registro.nome, tel: registro.tel, cpf: registro.cpf, ts: Date.now() });
       await deleteDoc(doc(db, "pendentes", num));
     } else {
-      vendidos[num] = { nome: registro.nome, tel: registro.tel, ts: Date.now() };
+      vendidos[num] = { nome: registro.nome, tel: registro.tel, cpf: registro.cpf, ts: Date.now() };
       delete pendentes[num];
       salvarLocal();
       renderTudo();
