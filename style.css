@@ -796,52 +796,12 @@ button { touch-action: manipulation; }
 }
 
 /* ═══════════════════════════════════════════════════════════
-   AUTENTICAÇÃO: TABS DO MODAL
+   MODAL DE ACESSO ADMIN
 ═══════════════════════════════════════════════════════════ */
-#authOverlay {
+#adminLoginOverlay {
   background:
     radial-gradient(circle at 50% 0, rgba(255, 37, 52, .16), transparent 260px),
     linear-gradient(180deg, #070707 0%, #0f0f0f 42%, #050505 100%);
-}
-
-/* Enquanto não há sessão confirmada, esconde a rifa e força o gate visível
-   (evita o "flash" do conteúdo antes do JS terminar de checar o login). */
-html:not(.sessao-ok) .main,
-html:not(.sessao-ok) .compra-bar {
-  display: none !important;
-}
-
-html:not(.sessao-ok) #authOverlay {
-  display: flex !important;
-}
-
-.auth-tabs {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 6px;
-  margin-bottom: 16px;
-  padding: 4px;
-  background: #191919;
-  border: 1px solid #303030;
-  border-radius: 10px;
-}
-
-.auth-tab {
-  padding: 10px;
-  border: 0;
-  border-radius: 8px;
-  background: transparent;
-  color: #999;
-  font-weight: 800;
-  font-size: 13px;
-  text-transform: uppercase;
-  letter-spacing: .4px;
-  cursor: pointer;
-}
-
-.auth-tab.active {
-  background: var(--red);
-  color: #fff;
 }
 
 /* ═══════════════════════════════════════════════════════════
