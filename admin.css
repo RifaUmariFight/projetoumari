@@ -42,7 +42,7 @@ a { color: inherit; }
 .admin-senha-input {
   width: 100%;
   max-width: 280px;
-  padding: 12px 14px;
+  padding: 12px 44px 12px 14px;
   border: 1px solid var(--line);
   border-radius: 8px;
   font-size: 14px;
@@ -54,6 +54,36 @@ a { color: inherit; }
   outline: none;
   border-color: var(--roxo);
 }
+
+.senha-wrap {
+  position: relative;
+  width: 100%;
+  max-width: 280px;
+}
+
+.senha-wrap .admin-senha-input {
+  max-width: none;
+}
+
+.btn-olho {
+  position: absolute;
+  top: 50%;
+  right: 6px;
+  transform: translateY(-50%);
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: 0;
+  font-size: 16px;
+  cursor: pointer;
+  border-radius: 6px;
+  line-height: 1;
+}
+
+.btn-olho:hover { background: var(--bg); }
 
 .admin-senha-btn {
   width: 100%;
