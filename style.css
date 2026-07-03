@@ -554,13 +554,13 @@ button { touch-action: manipulation; }
   justify-content: center;
   background: transparent;
   border: 0;
-  font-size: 16px;
+  color: #999;
   cursor: pointer;
   border-radius: 6px;
   line-height: 1;
 }
 
-.btn-olho:hover { background: #262626; }
+.btn-olho:hover { background: #262626; color: #fff; }
 
 .btn-prim,
 .btn-paguei {
