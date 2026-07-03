@@ -17,7 +17,7 @@ const PIX_CHAVE_CFG    = "40f37b54-0074-443d-bc40-16b68a67fbbb";
 let vendidos    = {};
 let pendentes   = {};
 let useFirebase = false;
-let dbRef       = null; // { ref, set, db } — só existe quando useFirebase = true
+let dbRef       = null; // { collection, doc, setDoc, deleteDoc, ... } — só existe quando useFirebase = true
 let viewAtual   = "dashboard";
 let filtroBilhetes = "todos";
 
@@ -66,12 +66,15 @@ async function iniciarDashboard() {
 
   if (isConfigReal) {
     try {
-      const { initializeApp }                 = await import("https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js");
-      const { getDatabase, ref, onValue, set } = await import("https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js");
+      const { initializeApp } = await import("https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js");
+      const {
+        getFirestore, collection, doc, setDoc, deleteDoc,
+        onSnapshot, getDocs, writeBatch,
+      } = await import("https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js");
 
       const app = initializeApp(FIREBASE_CONFIG);
-      const db  = getDatabase(app);
-      dbRef = { ref, set, db };
+      const db  = getFirestore(app);
+      dbRef = { collection, doc, setDoc, deleteDoc, onSnapshot, getDocs, writeBatch, db };
       useFirebase = true;
 
       const aoFalhar = (origem) => (erro) => {
@@ -84,14 +87,20 @@ async function iniciarDashboard() {
         }
       };
 
-      onValue(ref(db, "numeros"), snap => {
-        vendidos = snap.val() || {};
+      const paraObjeto = (snap) => {
+        const obj = {};
+        snap.forEach(d => { obj[d.id] = d.data(); });
+        return obj;
+      };
+
+      onSnapshot(collection(db, "numeros"), snap => {
+        vendidos = paraObjeto(snap);
         renderTudo();
         atualizarStatusSync(true);
       }, aoFalhar("numeros"));
 
-      onValue(ref(db, "pendentes"), snap => {
-        pendentes = snap.val() || {};
+      onSnapshot(collection(db, "pendentes"), snap => {
+        pendentes = paraObjeto(snap);
         renderTudo();
       }, aoFalhar("pendentes"));
     } catch (e) {
@@ -442,9 +451,9 @@ async function aprovarPagamento(num) {
 
   try {
     if (useFirebase && dbRef) {
-      const { ref, set, db } = dbRef;
-      await set(ref(db, `numeros/${num}`), { nome: registro.nome, tel: registro.tel, ts: Date.now() });
-      await set(ref(db, `pendentes/${num}`), null);
+      const { doc, setDoc, deleteDoc, db } = dbRef;
+      await setDoc(doc(db, "numeros", num), { nome: registro.nome, tel: registro.tel, ts: Date.now() });
+      await deleteDoc(doc(db, "pendentes", num));
     } else {
       vendidos[num] = { nome: registro.nome, tel: registro.tel, ts: Date.now() };
       delete pendentes[num];
@@ -462,8 +471,8 @@ async function rejeitarPagamento(num) {
 
   try {
     if (useFirebase && dbRef) {
-      const { ref, set, db } = dbRef;
-      await set(ref(db, `pendentes/${num}`), null);
+      const { doc, deleteDoc, db } = dbRef;
+      await deleteDoc(doc(db, "pendentes", num));
     } else {
       delete pendentes[num];
       salvarLocal();
@@ -478,6 +487,15 @@ async function rejeitarPagamento(num) {
 /* ─────────────────────────────────────────────────────────
    RESETAR TUDO (zona de risco — aba Configurações)
 ───────────────────────────────────────────────────────── */
+async function limparColecaoFirestore(nomeColecao) {
+  const { collection, getDocs, writeBatch, db } = dbRef;
+  const snap = await getDocs(collection(db, nomeColecao));
+  if (snap.empty) return;
+  const batch = writeBatch(db);
+  snap.forEach(d => batch.delete(d.ref));
+  await batch.commit();
+}
+
 async function resetarTudoAdmin() {
   const digitado = prompt(
     "⚠️ Isso vai apagar TODOS os números vendidos, pendentes e reservados — a rifa volta ao início do zero.\n\n" +
@@ -491,10 +509,9 @@ async function resetarTudoAdmin() {
 
   try {
     if (useFirebase && dbRef) {
-      const { ref, set, db } = dbRef;
-      await set(ref(db, "numeros"), null);
-      await set(ref(db, "reservas"), null);
-      await set(ref(db, "pendentes"), null);
+      await limparColecaoFirestore("numeros");
+      await limparColecaoFirestore("reservas");
+      await limparColecaoFirestore("pendentes");
     } else {
       vendidos  = {};
       pendentes = {};
